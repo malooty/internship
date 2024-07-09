@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Daily RMSE Calculator</title>
+</head>
+<body>
+    <h1>Daily RMSE Calculator</h1>
+    <form id="upload-form" enctype="multipart/form-data">
+        <label for="forecast-files">Upload Forecast CSV Files:</label>
+        <input type="file" id="forecast-files" name="forecast_files" accept=".csv" multiple required>
+        <br><br>
+        <label for="actual-file">Upload Actual CSV File:</label>
+        <input type="file" id="actual-file" name="actual_file" accept=".csv" required>
+        <br><br>
+        <label for="start-date">Start Date:</label>
+        <input type="date" id="start-date" name="start-date" required>
+        <br><br>
+        <label for="end-date">End Date:</label>
+        <input type="date" id="end-date" name="end-date" required>
+        <br><br>
+        <button type="submit">Calculate Daily RMSE</button>
+    </form>
+    <div id="result"></div>
+    <script>
+        document.getElementById('upload-form').addEventListener('submit', function(event) {
+            event.preventDefault();
+            var formData = new FormData();
+            var forecastFiles = document.getElementById('forecast-files').files;
+            for (var i = 0; i < forecastFiles.length; i++) {
+                formData.append('forecast_files', forecastFiles[i]);
+            }
+            formData.append('actual_file', document.getElementById('actual-file').files[0]);
+            formData.append('start_date', document.getElementById('start-date').value);
+            formData.append('end_date', document.getElementById('end-date').value);
+
+            fetch('http://127.0.0.1:5000/calculate_daily_rmse', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    document.getElementById('result').textContent = 'Error: ' + data.error;
+                } else {
+                    var rmseData = JSON.parse(data);
+                    var resultHTML = '<h2>Daily RMSE Results:</h2><table border="1"><tr><th>Date</th>';
+                    var teamNames = Object.keys(rmseData[0]).filter(key => key !== 'date');
+                    teamNames.forEach(function(team) {
+                        resultHTML += '<th>' + team + '</th>';
+                    });
+                    resultHTML += '</tr>';
+                    rmseData.forEach(function(row) {
+                        resultHTML += '<tr><td>' + row.date + '</td>';
+                        teamNames.forEach(function(team) {
+                            resultHTML += '<td>' + (row[team] !== null ? row[team].toFixed(10) : '') + '</td>';
+                        });
+                        resultHTML += '</tr>';
+                    });
+                    resultHTML += '</table>';
+                    document.getElementById('result').innerHTML = resultHTML;
+                }
+            })
+            .catch(error => {
+                document.getElementById('result').textContent = 'Error: ' + error;
+            });
+        });
+    </script>
+</body>
+</html>
